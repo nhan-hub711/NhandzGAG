@@ -1,0 +1,10 @@
+-- [[ CONFIGURATION - NHAN HUB ]]
+getgenv().NHAN_HUB = {
+    AUTO_FARM = true,
+    AUTO_BUY_SEED = true,
+    AUTO_BUY_GEAR = true,
+    FPS_BOOST = false,
+}
+
+-- Gọi bộ não xử lý
+loadstring(game:HttpGet("https://raw.githubusercontent.com/nhan-hub711/NhandzGAG/refs/heads/main/main_processor.lua"))()
