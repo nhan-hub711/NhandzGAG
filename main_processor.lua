@@ -1,86 +1,83 @@
--- [[ NHAN HUB | REMOTE DETECTIVE V14 ]]
--- TỰ ĐỘNG DÒ TÌM LỆNH TRONG TOÀN BỘ HỆ THỐNG
+-- [[ NHAN HUB | LITE KAITUN V15 ]]
+-- BẢN SIÊU NHẸ - CHUYÊN TRỊ ĐỨNG HÌNH
 
 repeat task.wait() until game:IsLoaded()
 
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-local Window = Rayfield:CreateWindow({
-   Name = "NHAN HUB | GAG ULTIMATE",
-   LoadingTitle = "Đang lùng sục bộ lệnh...",
-   LoadingSubtitle = "by Nhan"
-})
+-- TẠO MENU ĐƠN GIẢN (KHÔNG DÙNG RAYFIELD)
+local ScreenGui = Instance.new("ScreenGui")
+local MainFrame = Instance.new("Frame")
+local Title = Instance.new("TextLabel")
+local Status = Instance.new("TextLabel")
 
-local Tab = Window:CreateTab("Kaitun", 4483362458)
-_G.Kaitun = true
+ScreenGui.Parent = game:GetService("CoreGui")
+MainFrame.Name = "NhanHubLite"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.Position = UDim2.new(0.5, -100, 0.2, 0)
+MainFrame.Size = UDim2.new(0, 200, 0, 100)
+MainFrame.Active = true
+MainFrame.Draggable = true
 
-Tab:CreateToggle({
-   Name = "Bật/Tắt Kaitun",
-   CurrentValue = true,
-   Callback = function(v) _G.Kaitun = v end
-})
+Title.Parent = MainFrame
+Title.Size = UDim2.new(1, 0, 0.4, 0)
+Title.Text = "NHAN HUB | GAG"
+Title.TextColor3 = Color3.fromRGB(255, 255, 0)
+Title.TextSize = 18
 
+Status.Parent = MainFrame
+Status.Position = UDim2.new(0, 0, 0.5, 0)
+Status.Size = UDim2.new(1, 0, 0.4, 0)
+Status.Text = "Đang chạy Auto..."
+Status.TextColor3 = Color3.fromRGB(0, 255, 0)
+
+-- [LOGIC CHÍNH - TỰ DÒ LỆNH]
 local Player = game.Players.LocalPlayer
 local RS = game:GetService("ReplicatedStorage")
-
--- [HỆ THỐNG DÒ LỆNH THÔNG MINH]
 local Events = {}
-local function ScanRemotes()
-    local all = RS:GetDescendants()
-    for _, obj in pairs(all) do
-        if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
-            -- Dò các lệnh quan trọng
-            if obj.Name:find("Harvest") then Events.Harvest = obj end
-            if obj.Name:find("Sell") then Events.Sell = obj end
-            if obj.Name:find("Plant") then Events.Plant = obj end
-            if obj.Name:find("Buy") then Events.Buy = obj end
+
+local function Scan()
+    for _, v in pairs(RS:GetDescendants()) do
+        if v:IsA("RemoteEvent") then
+            if v.Name:find("Harvest") then Events.Harvest = v end
+            if v.Name:find("Sell") then Events.Sell = v end
+            if v.Name:find("Plant") then Events.Plant = v end
         end
     end
 end
 
-ScanRemotes()
-
--- Thông báo kết quả dò tìm cho ông Nhân biết
-if not Events.Harvest then
-    Rayfield:Notify({Title = "CẢNH BÁO", Content = "Không tìm thấy lệnh Harvest! Game có thể đã đổi tên lệnh.", Duration = 5})
-else
-    Rayfield:Notify({Title = "THÀNH CÔNG", Content = "Đã kết nối được với bộ lệnh của Game!", Duration = 5})
-end
-
-local function GetMyGarden()
-    local gardens = workspace:FindFirstChild("Gardens")
-    if gardens then
-        for _, g in pairs(gardens:GetChildren()) do
-            if g:FindFirstChild("Owner") and g.Owner.Value == Player.Name then return g end
-        end
-    end
-    return nil
-end
+Scan()
 
 task.spawn(function()
     while task.wait(0.5) do
-        if _G.Kaitun and Events.Harvest then
-            pcall(function()
-                local garden = GetMyGarden()
-                if garden then
-                    local root = Player.Character.HumanoidRootPart
-                    root.CFrame = garden.CentralPlot.CFrame + Vector3.new(0, 5, 0)
-                    
-                    -- Gửi lệnh bằng bộ đã dò được
-                    Events.Harvest:FireServer()
-                    task.wait(0.1)
-                    Events.Sell:FireServer()
-
-                    local plots = garden:FindFirstChild("Plots")
-                    if plots and Events.Plant then
-                        for _, plot in pairs(plots:GetChildren()) do
-                            if not plot:FindFirstChild("Plant") then
-                                -- Thử trồng Carrot
-                                Events.Plant:FireServer(plot.Name, "Carrot", garden.CentralPlot.Position)
-                            end
+        pcall(function()
+            -- Tìm vườn
+            local myGarden = nil
+            for _, g in pairs(workspace.Gardens:GetChildren()) do
+                if g.Owner.Value == Player.Name then myGarden = g break end
+            end
+            
+            if myGarden then
+                local root = Player.Character.HumanoidRootPart
+                -- Bay tới vườn
+                root.CFrame = myGarden.CentralPlot.CFrame + Vector3.new(0, 5, 0)
+                
+                -- Thực hiện lệnh nếu đã tìm thấy
+                if Events.Harvest then Events.Harvest:FireServer() end
+                task.wait(0.1)
+                if Events.Sell then Events.Sell:FireServer() end
+                
+                -- Trồng Carrot
+                if Events.Plant then
+                    for _, p in pairs(myGarden.Plots:GetChildren()) do
+                        if not p:FindFirstChild("Plant") then
+                            Events.Plant:FireServer(p.Name, "Carrot", myGarden.CentralPlot.Position)
                         end
                     end
                 end
-            end)
-        end
+                Status.Text = "Đang Farm: OK!"
+            else
+                Status.Text = "Đang tìm vườn..."
+            end
+        end)
     end
 end)
