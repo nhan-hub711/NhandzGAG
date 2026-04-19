@@ -1,9 +1,8 @@
--- [[ NHAN HUB | V25 CLEAN & FAST ]]
--- CHỈ TẬP TRUNG: BÁN -> MUA -> TRỒNG TẠI TÂM
+-- [[ NHAN HUB | V26 RADAR FIX ]]
+-- TỰ ĐỘNG DÒ LỆNH TRÊN TOÀN HỆ THỐNG - BỎ QUA EASTER
 
 repeat task.wait() until game:IsLoaded()
 
--- DANH SÁCH HẠT GIỐNG CHUẨN CỦA NHÂN
 local SeedList = {
     {name = "Carrot", price = 10},
     {name = "Orange Tulip", price = 450},
@@ -23,61 +22,84 @@ local SeedList = {
     {name = "Elder Strawberry", price = 70000000}
 }
 
--- TOẠ ĐỘ VÀNG (ĐÃ FIX THEO ẢNH)
 local Pos = {
-    Garden = CFrame.new(-208.99, 3.11, 68.47), --
-    Sell = CFrame.new(36.58, 2.99, 0.38),      --
-    Seeds = CFrame.new(36.57, 2.99, 0.38)     --
+    Garden = CFrame.new(-208.99, 3.11, 68.47),
+    Sell = CFrame.new(36.58, 2.99, 0.38),
+    Seeds = CFrame.new(36.57, 2.99, 0.38)
 }
 
 local Player = game.Players.LocalPlayer
-local RS = game:GetService("ReplicatedStorage")
-local Events = {
-    Harvest = RS:WaitForChild("Remotes"):WaitForChild("HarvestEvent"), -- Ví dụ tên chuẩn
-    Sell = RS:WaitForChild("Remotes"):WaitForChild("SellEvent"),
-    Plant = RS:WaitForChild("Remotes"):WaitForChild("PlantEvent"),
-    Buy = RS:WaitForChild("Remotes"):WaitForChild("BuyEvent")
-}
+local Events = {}
+
+-- [[ CON RADAR TỰ DÒ LỆNH ]]
+local function ScanEvents()
+    for _, v in pairs(game:GetDescendants()) do
+        if v:IsA("RemoteEvent") then
+            local n = v.Name:lower()
+            -- Bỏ qua mấy cái lệnh liên quan tới Easter/Event cho đỡ lag
+            if not n:find("easter") and not n:find("event") then
+                if n:find("harvest") then Events.Harvest = v end
+                if n:find("sell") then Events.Sell = v end
+                if n:find("plant") then Events.Plant = v end
+                if n:find("buy") then Events.Buy = v end
+                if n:find("water") then Events.Water = v end
+            end
+        end
+    end
+end
+
+ScanEvents()
 
 local function GetMoney()
-    return Player.leaderstats.Money.Value
+    local stats = Player:FindFirstChild("leaderstats")
+    if stats then
+        local m = stats:FindFirstChild("Money") or stats:FindFirstChild("Coins")
+        if m then return m.Value end
+    end
+    return 0
 end
 
 task.spawn(function()
-    while task.wait(2) do
+    while task.wait(2.5) do -- Tăng thời gian chờ tí cho máy Nhân load kịp
         pcall(function()
             local root = Player.Character.HumanoidRootPart
-            local money = GetMoney()
+            local myMoney = GetMoney()
             
-            -- BƯỚC 1: BAY ĐI BÁN (STEVEN)
+            -- 1. ĐI BÁN (STEVEN)
             root.CFrame = Pos.Sell
-            task.wait(0.7)
-            Events.Sell:FireServer()
+            task.wait(1) -- Chờ đứng im hẳn mới bấm bán
+            if Events.Sell then Events.Sell:FireServer() end
             
-            -- BƯỚC 2: BAY ĐI MUA HẠT (SAM)
+            -- 2. ĐI MUA (SAM)
             root.CFrame = Pos.Seeds
-            task.wait(0.7)
+            task.wait(1)
             local toBuy = "Carrot"
             for i = #SeedList, 1, -1 do
-                if money >= (SeedList[i].price * 10) then
+                if myMoney >= (SeedList[i].price * 10) then
                     toBuy = SeedList[i].name
-                    Events.Buy:FireServer(toBuy, 10)
+                    if Events.Buy then Events.Buy:FireServer(toBuy, 10) end
                     break
                 end
             end
-            
-            -- BƯỚC 3: VỀ TÂM VƯỜN TRỒNG TỤM
+
+            -- 3. VỀ VƯỜN TRỒNG TỤM
             root.CFrame = Pos.Garden
-            task.wait(1)
-            Events.Harvest:FireServer() -- Thu hoạch tại chỗ
+            task.wait(1.2)
+            if Events.Harvest then Events.Harvest:FireServer() end
             
             for i = 1, 20 do
-                Events.Plant:FireServer("Plot"..i, toBuy, Pos.Garden.Position)
-                -- Lệnh tưới nước nếu ông có bình xịt
-                if RS.Remotes:FindFirstChild("WaterEvent") then
-                    RS.Remotes.WaterEvent:FireServer("Plot"..i)
+                if Events.Plant then
+                    -- Trồng tụm vào 1 điểm tọa độ Garden
+                    Events.Plant:FireServer("Plot"..i, toBuy, Pos.Garden.Position)
+                    Events.Plant:FireServer(tostring(i), toBuy, Pos.Garden.Position)
+                end
+                if Events.Water then 
+                    Events.Water:FireServer("Plot"..i)
+                    Events.Water:FireServer(tostring(i))
                 end
             end
         end)
     end
 end)
+
+print("NHAN HUB V26: RADAR ĐÃ QUÉT XONG, ĐANG CHẠY...")
