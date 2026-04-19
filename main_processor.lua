@@ -1,9 +1,9 @@
--- [[ NHAN HUB | FINAL REPAIR V5 ]]
+-- [[ NHAN HUB | GAG SPECIAL V7 ]]
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-   Name = "NHAN HUB | GAG PRO",
-   LoadingTitle = "Đang khởi động máy farm...",
+   Name = "NHAN HUB | GROW A GARDEN",
+   LoadingTitle = "Đang tìm vườn của ông Nhân...",
    LoadingSubtitle = "by Nhan",
    ConfigurationSaving = { Enabled = false }
 })
@@ -15,7 +15,6 @@ local CONFIG = getgenv().NHAN_HUB or {
     PLANT_SEED = {"Carrot"}
 }
 
--- [TẠO TAB]
 local Tab1 = Window:CreateTab("Main Farm", 4483362458)
 
 Tab1:CreateToggle({
@@ -30,52 +29,44 @@ Tab1:CreateToggle({
    Callback = function(Value) CONFIG.AUTO_BUY_SEED = Value end,
 })
 
--- [HỆ THỐNG XỬ LÝ CHÍNH]
+-- [LOGIC ĐẶC BIỆT CHO GAG]
 local Player = game.Players.LocalPlayer
-local RS = game:GetService("ReplicatedStorage")
-local Remotes = RS:WaitForChild("Remotes")
+local Remotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")
 
--- Hàm tìm vườn (Sửa lại để quét chuẩn hơn)
 local function GetMyGarden()
-    local gardens = workspace:FindFirstChild("Gardens")
-    if gardens then
-        for _, g in pairs(gardens:GetChildren()) do
-            local ownerObj = g:FindFirstChild("Owner")
-            if ownerObj and (ownerObj.Value == Player.Name or ownerObj.Value == Player.DisplayName) then
-                return g
-            end
+    for _, g in pairs(workspace.Gardens:GetChildren()) do
+        if g:FindFirstChild("Owner") and g.Owner.Value == Player.Name then
+            return g
         end
     end
     return nil
 end
 
--- Vòng lặp Farm (Tăng tốc độ quét)
 task.spawn(function()
-    while task.wait(0.5) do -- Chỉnh lại 0.5 giây cho nhanh
+    while task.wait(1) do
         if CONFIG.AUTO_FARM then
             pcall(function()
                 local myGarden = GetMyGarden()
                 if myGarden then
+                    -- Bay tới vườn (Cái này quan trọng nè, phải ở gần mới farm được)
+                    local root = Player.Character.HumanoidRootPart
+                    if (root.Position - myGarden.CentralPlot.Position).Magnitude > 20 then
+                        root.CFrame = myGarden.CentralPlot.CFrame + Vector3.new(0, 3, 0)
+                    end
+
                     -- 1. Thu hoạch & Bán
                     Remotes.HarvestAll:FireServer()
-                    task.wait(0.1)
+                    task.wait(0.2)
                     Remotes.SellAllCrops:FireServer()
-                    
-                    -- 2. Tự mua hạt (Nếu ông ghi trong text.txt)
+
                     if CONFIG.AUTO_BUY_SEED then
-                        -- Thử mua loại hạt đầu tiên trong danh sách của ông
-                        local targetSeed = CONFIG.BUY_SEED_SHOP[1] or "Carrot"
-                        Remotes.BuySeed:FireServer(targetSeed, 10)
-                        
-                        -- 3. Trồng cây
-                        local plots = myGarden:FindFirstChild("Plots")
-                        if plots then
-                            for _, plot in pairs(plots:GetChildren()) do
-                                if not plot:FindFirstChild("Plant") then
-                                    local seedToPlant = CONFIG.PLANT_SEED[1] or "Carrot"
-                                    -- Gửi lệnh trồng ngay tại vị trí ô đất
-                                    Remotes.PlantSeed:FireServer(plot.Name, seedToPlant, plot.Position)
-                                end
+                        -- 2. Trồng cây
+                        for _, plot in pairs(myGarden.Plots:GetChildren()) do
+                            if not plot:FindFirstChild("Plant") then
+                                local seed = CONFIG.PLANT_SEED[1] or "Carrot"
+                                -- Lệnh GAG chuẩn: Cần tên Plot, tên hạt, và Vị trí trung tâm
+                                Remotes.PlantSeed:FireServer(plot.Name, seed, myGarden.CentralPlot.Position)
+                                task.wait(0.1) -- Delay nhẹ để không bị văng
                             end
                         end
                     end
@@ -85,4 +76,4 @@ task.spawn(function()
     end
 end)
 
-Rayfield:Notify({Title = "NHAN HUB", Content = "Đã kích hoạt chế độ Farm siêu tốc!", Duration = 5})
+Rayfield:Notify({Title = "NHAN HUB", Content = "Đã bật chế độ tự bay tới vườn!", Duration = 5})
