@@ -1,9 +1,9 @@
--- [[ NHAN HUB | FIX V4 ]]
+-- [[ NHAN HUB | FINAL REPAIR V5 ]]
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
    Name = "NHAN HUB | GAG PRO",
-   LoadingTitle = "Đang kết nối hệ thống...",
+   LoadingTitle = "Đang khởi động máy farm...",
    LoadingSubtitle = "by Nhan",
    ConfigurationSaving = { Enabled = false }
 })
@@ -15,17 +15,7 @@ local CONFIG = getgenv().NHAN_HUB or {
     PLANT_SEED = {"Carrot"}
 }
 
--- Bảng giá
-local PriceList = {
-    ["Elder Strawberry"] = 70000000, ["Beanstalk"] = 10000000,
-    ["Pepper"] = 1000000, ["Grape"] = 850000, ["Mango"] = 100000,
-    ["Dragon Fruit"] = 50000, ["Cactus"] = 15000, ["Coconut"] = 6000,
-    ["Bamboo"] = 4000, ["Apple"] = 3250, ["Pumpkin"] = 3000,
-    ["Watermelon"] = 2500, ["Tomato"] = 800, ["Daffodil"] = 1000,
-    ["Orange Tulip"] = 450, ["Carrot"] = 10
-}
-
--- [TẠO TAB] - Phải tạo Tab trước rồi mới thêm Toggle
+-- [TẠO TAB]
 local Tab1 = Window:CreateTab("Main Farm", 4483362458)
 
 Tab1:CreateToggle({
@@ -35,61 +25,57 @@ Tab1:CreateToggle({
 })
 
 Tab1:CreateToggle({
-   Name = "Auto Buy & Plant (Theo List)",
+   Name = "Auto Buy & Plant",
    CurrentValue = CONFIG.AUTO_BUY_SEED,
    Callback = function(Value) CONFIG.AUTO_BUY_SEED = Value end,
 })
 
--- [LOGIC XỬ LÝ]
+-- [HỆ THỐNG XỬ LÝ CHÍNH]
 local Player = game.Players.LocalPlayer
-local Remotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")
-_G.CanBuyNow = false
+local RS = game:GetService("ReplicatedStorage")
+local Remotes = RS:WaitForChild("Remotes")
 
+-- Hàm tìm vườn (Sửa lại để quét chuẩn hơn)
 local function GetMyGarden()
-    for _, garden in pairs(workspace.Gardens:GetChildren()) do
-        if garden:FindFirstChild("Owner") and garden.Owner.Value == Player.Name then return garden end
+    local gardens = workspace:FindFirstChild("Gardens")
+    if gardens then
+        for _, g in pairs(gardens:GetChildren()) do
+            local ownerObj = g:FindFirstChild("Owner")
+            if ownerObj and (ownerObj.Value == Player.Name or ownerObj.Value == Player.DisplayName) then
+                return g
+            end
+        end
     end
     return nil
 end
 
--- Bắt tin nhắn Restock
-Player.PlayerGui.DescendantAdded:Connect(function(descendant)
-    if descendant:IsA("TextLabel") and string.find(descendant.Text:lower(), "restocked") then
-        _G.CanBuyNow = true 
-    end
-end)
-
+-- Vòng lặp Farm (Tăng tốc độ quét)
 task.spawn(function()
-    while task.wait(1.5) do
+    while task.wait(0.5) do -- Chỉnh lại 0.5 giây cho nhanh
         if CONFIG.AUTO_FARM then
             pcall(function()
                 local myGarden = GetMyGarden()
-                if not myGarden then return end
-                
-                -- Luôn thu hoạch và bán
-                Remotes.HarvestAll:FireServer()
-                Remotes.SellAllCrops:FireServer()
-
-                if CONFIG.AUTO_BUY_SEED then
-                    -- Mua hạt khi có restock
-                    if _G.CanBuyNow then
-                        local myCash = Player.Data.Beli.Value
-                        for _, seed in pairs(CONFIG.BUY_SEED_SHOP) do
-                            local price = PriceList[seed] or 99999999
-                            if myCash >= price then
-                                Remotes.BuySeed:FireServer(seed, 10)
-                                break
-                            end
-                        end
-                        _G.CanBuyNow = false
-                    end
-
-                    -- Trồng hạt
-                    local targetPos = myGarden.CentralPlot.Position
-                    for _, plot in pairs(myGarden.Plots:GetChildren()) do
-                        if not plot:FindFirstChild("Plant") then
-                            for _, seed in pairs(CONFIG.PLANT_SEED) do
-                                Remotes.PlantSeed:FireServer(plot.Name, seed, targetPos)
+                if myGarden then
+                    -- 1. Thu hoạch & Bán
+                    Remotes.HarvestAll:FireServer()
+                    task.wait(0.1)
+                    Remotes.SellAllCrops:FireServer()
+                    
+                    -- 2. Tự mua hạt (Nếu ông ghi trong text.txt)
+                    if CONFIG.AUTO_BUY_SEED then
+                        -- Thử mua loại hạt đầu tiên trong danh sách của ông
+                        local targetSeed = CONFIG.BUY_SEED_SHOP[1] or "Carrot"
+                        Remotes.BuySeed:FireServer(targetSeed, 10)
+                        
+                        -- 3. Trồng cây
+                        local plots = myGarden:FindFirstChild("Plots")
+                        if plots then
+                            for _, plot in pairs(plots:GetChildren()) do
+                                if not plot:FindFirstChild("Plant") then
+                                    local seedToPlant = CONFIG.PLANT_SEED[1] or "Carrot"
+                                    -- Gửi lệnh trồng ngay tại vị trí ô đất
+                                    Remotes.PlantSeed:FireServer(plot.Name, seedToPlant, plot.Position)
+                                end
                             end
                         end
                     end
@@ -99,4 +85,4 @@ task.spawn(function()
     end
 end)
 
-Rayfield:Notify({Title = "NHAN HUB", Content = "Đã sửa lỗi hiển thị!", Duration = 3})
+Rayfield:Notify({Title = "NHAN HUB", Content = "Đã kích hoạt chế độ Farm siêu tốc!", Duration = 5})
