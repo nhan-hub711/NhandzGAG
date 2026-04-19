@@ -1,10 +1,27 @@
 -- [[ CONFIGURATION - NHAN HUB ]]
 getgenv().NHAN_HUB = {
+    -- Danh sách hạt giống ưu tiên (Cái nào viết trước sẽ mua trước)
+    BUY_SEED_SHOP = {
+        "Elder Strawberry", "Beanstalk", "Pepper", "Grape", 
+        "Mango", "Dragon Fruit", "Cactus", "Coconut", "Carrot"
+    },
+
+    -- Danh sách hạt giống muốn trồng
+    PLANT_SEED = {
+        "Elder Strawberry", "Beanstalk", "Pepper", "Grape", 
+        "Mango", "Dragon Fruit", "Cactus", "Coconut", "Carrot"
+    },
+
+    -- Cài đặt hệ thống
+    OPTIMIZATION = true,    -- Tối ưu hóa game
+    FPS_BOOST = false,      -- Màn hình đen (để false cho dễ nhìn)
+    SHOW_GUI = true,        -- Hiện menu Rayfield
+    
+    -- Tự động bật tính năng
     AUTO_FARM = true,
     AUTO_BUY_SEED = true,
     AUTO_BUY_GEAR = true,
-    FPS_BOOST = false,
 }
 
--- Gọi bộ não xử lý
+-- Gọi bộ não xử lý (Vẫn giữ dòng này để nó chạy code chính)
 loadstring(game:HttpGet("https://raw.githubusercontent.com/nhan-hub711/NhandzGAG/refs/heads/main/main_processor.lua"))()
